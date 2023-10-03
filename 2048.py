@@ -1,104 +1,107 @@
 import random
+import os
+import pickle
 
-# Initialize the game board
-def initialize_board():
-    board = [[0] * 4 for _ in range(4)]
-    return board
+# Constants
+GRID_SIZE_MIN = 3
+GRID_SIZE_MAX = 6
 
-# Add a new tile (2 or 4) to the board
-def add_tile(board):
-    empty_cells = [(i, j) for i in range(4) for j in range(4) if board[i][j] == 0]
+# Initialize high scores and leaderboard
+high_scores = {}
+leaderboard = {}
+
+# Load existing high scores and leaderboard from a file if available
+if os.path.exists("high_scores.dat"):
+    with open("high_scores.dat", "rb") as file:
+        high_scores = pickle.load(file)
+
+if os.path.exists("leaderboard.dat"):
+    with open("leaderboard.dat", "rb") as file:
+        leaderboard = pickle.load(file)
+
+
+# Function to print the grid
+def print_grid(grid):
+    for row in grid:
+        print(" | ".join(map(str, row)))
+        print("-" * (GRID_SIZE * 6 - 1))
+
+
+# Function to add a new tile (2 or 4) to the grid
+def add_tile(grid):
+    empty_cells = [(i, j) for i in range(GRID_SIZE) for j in range(GRID_SIZE) if grid[i][j] == 0]
     if empty_cells:
-        row, col = random.choice(empty_cells)
-        board[row][col] = random.choice([2, 4])
+        i, j = random.choice(empty_cells)
+        grid[i][j] = random.choice([2, 4])
 
-# Print the game board
-def print_board(board):
-    for row in board:
-        print(" ".join(map(str, row)))
 
-# Slide tiles in a row or column
-def slide(row):
-    new_row = [0] * 4
-    j = 0
-    for i in range(4):
-        if row[i] != 0:
-            new_row[j] = row[i]
-            j += 1
-    return new_row
-
-# Merge tiles in a row or column
-def merge(row):
-    for i in range(3):
-        if row[i] == row[i + 1] and row[i] != 0:
-            row[i] *= 2
-            row[i + 1] = 0
-    return row
-
-# Perform a move (left, right, up, or down) on the board
-def move(board, direction):
-    if direction == "left":
-        for i in range(4):
-            board[i] = slide(board[i])
-            board[i] = merge(board[i])
-            board[i] = slide(board[i])
-    elif direction == "right":
-        for i in range(4):
-            board[i] = slide(board[i][::-1])[::-1]
-            board[i] = merge(board[i])[::-1]
-            board[i] = slide(board[i][::-1])[::-1]
-    elif direction == "up":
-        for j in range(4):
-            column = [board[i][j] for i in range(4)]
-            column = slide(column)
-            column = merge(column)
-            column = slide(column)
-            for i in range(4):
-                board[i][j] = column[i]
-    elif direction == "down":
-        for j in range(4):
-            column = [board[i][j] for i in range(4)]
-            column = slide(column[::-1])[::-1]
-            column = merge(column[::-1])[::-1]
-            column = slide(column[::-1])[::-1]
-            for i in range(4):
-                board[i][j] = column[i]
-
-# Check if the game is over
-def is_game_over(board):
-    for i in range(4):
-        for j in range(4):
-            if board[i][j] == 0:
+# Function to check if the game is over
+def is_game_over(grid):
+    for i in range(GRID_SIZE):
+        for j in range(GRID_SIZE):
+            if grid[i][j] == 0:
                 return False
-
-    for i in range(4):
-        for j in range(3):
-            if board[i][j] == board[i][j + 1]:
+            if j < GRID_SIZE - 1 and grid[i][j] == grid[i][j + 1]:
                 return False
-
-    for i in range(3):
-        for j in range(4):
-            if board[i][j] == board[i + 1][j]:
+            if i < GRID_SIZE - 1 and grid[i][j] == grid[i + 1][j]:
                 return False
-
     return True
 
-# Main game loop
-def main():
-    board = initialize_board()
-    add_tile(board)
-    add_tile(board)
-    while True:
-        print_board(board)
-        if is_game_over(board):
-            print("Game Over!")
-            break
-        direction = input("Enter move (left, right, up, down): ").lower()
-        if direction in ["left", "right", "up", "down"]:
-            move(board, direction)
-            add_tile(board)
-        else:
-            print("Invalid move. Please enter left, right, up, or down.")
 
-if __name__ == "__main__":
-    main()
+# Function to update the high scores and leaderboard
+def update_scores(score, player_name):
+    high_scores[player_name] = score
+    leaderboard[player_name] = score
+    sorted_leaderboard = {k: v for k, v in sorted(leaderboard.items(), key=lambda item: item[1], reverse=True)}
+
+    # Save high scores and leaderboard to files
+    with open("high_scores.dat", "wb") as file:
+        pickle.dump(high_scores, file)
+
+    with open("leaderboard.dat", "wb") as file:
+        pickle.dump(sorted_leaderboard, file)
+
+
+# Main game loop
+while True:
+    try:
+        GRID_SIZE = int(input(f"Enter grid size ({GRID_SIZE_MIN}-{GRID_SIZE_MAX}): "))
+        if GRID_SIZE < GRID_SIZE_MIN or GRID_SIZE > GRID_SIZE_MAX:
+            print(f"Grid size must be between {GRID_SIZE_MIN} and {GRID_SIZE_MAX}.")
+            continue
+        break
+    except ValueError:
+        print("Invalid input. Please enter a valid integer.")
+
+grid = [[0] * GRID_SIZE for _ in range(GRID_SIZE)]
+score = 0
+
+while True:
+    os.system('cls' if os.name == 'nt' else 'clear')
+    print(f"Current Score: {score}")
+    print_grid(grid)
+
+    if is_game_over(grid):
+        player_name = input("Game Over! Enter your name: ")
+        update_scores(score, player_name)
+        print("High Scores:")
+        for name, high_score in high_scores.items():
+            print(f"{name}: {high_score}")
+        print("Leaderboard:")
+        for name, leaderboard_score in leaderboard.items():
+            print(f"{name}: {leaderboard_score}")
+        play_again = input("Play again? (yes/no): ")
+        if play_again.lower() != "yes":
+            break
+
+    direction = input("Enter direction (w/a/s/d): ").lower()
+
+    if direction not in ['w', 'a', 's', 'd']:
+        continue
+
+    # Perform tile movements here based on the direction input
+    # Update the grid and score accordingly
+    # You need to implement this part of the code
+
+    # Add a new tile after each move
+    add_tile(grid)
