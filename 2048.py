@@ -1,6 +1,7 @@
 import random
 import os
 import pickle
+import copy  # Import the copy module
 
 # Constants
 GRID_SIZE_MIN = 3
@@ -19,13 +20,12 @@ if os.path.exists("leaderboard.dat"):
     with open("leaderboard.dat", "rb") as file:
         leaderboard = pickle.load(file)
 
-
 # Function to print the grid
 def print_grid(grid):
     for row in grid:
-        print(" | ".join(map(str, row)))
+        print(" | ".join(map(str, row))
+        )
         print("-" * (GRID_SIZE * 6 - 1))
-
 
 # Function to add a new tile (2 or 4) to the grid
 def add_tile(grid):
@@ -33,7 +33,6 @@ def add_tile(grid):
     if empty_cells:
         i, j = random.choice(empty_cells)
         grid[i][j] = random.choice([2, 4])
-
 
 # Function to check if the game is over
 def is_game_over(grid):
@@ -46,7 +45,6 @@ def is_game_over(grid):
             if i < GRID_SIZE - 1 and grid[i][j] == grid[i + 1][j]:
                 return False
     return True
-
 
 # Function to update the high scores and leaderboard
 def update_scores(score, player_name):
@@ -61,6 +59,8 @@ def update_scores(score, player_name):
     with open("leaderboard.dat", "wb") as file:
         pickle.dump(sorted_leaderboard, file)
 
+# Initialize undo stack
+undo_stack = []
 
 # Main game loop
 while True:
@@ -94,14 +94,22 @@ while True:
         if play_again.lower() != "yes":
             break
 
-    direction = input("Enter direction (w/a/s/d): ").lower()
+    direction = input("Enter direction (w/a/s/d/u for undo): ").lower()
 
-    if direction not in ['w', 'a', 's', 'd']:
+    if direction not in ['w', 'a', 's', 'd', 'u']:
         continue
 
-    # Perform tile movements here based on the direction input
-    # Update the grid and score accordingly
-    # You need to implement this part of the code
+    # Implement the undo functionality
+    if direction == 'u' and undo_stack:
+        grid = undo_stack.pop()  # Restore the previous grid state
+    else:
+        # Save the current grid state to the undo stack before making a move
+        previous_grid = copy.deepcopy(grid)
+        undo_stack.append(previous_grid)
 
-    # Add a new tile after each move
-    add_tile(grid)
+        # Perform tile movements based on the direction input
+        # Update the grid and score accordingly
+        # You need to implement this part of the code
+
+        # Add a new tile after each move
+        add_tile(grid)
